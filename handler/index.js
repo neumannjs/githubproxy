@@ -9,10 +9,10 @@ const config = {
   allowedOrigins: []
 }
 
-// if (process.env.NODE_ENV === 'development') {
-//   config.allowedOrigins.push('http://localhost:5500')
-//   config.allowedOrigins.push('http://localhost:3000')
-// }
+if (process.env.NODE_ENV === 'development') {
+  config.allowedOrigins.push('http://localhost:5500')
+  config.allowedOrigins.push('http://localhost:3000')
+}
 
 const handler = function (context) {
   context.log('Proxy Accescode request')
@@ -92,10 +92,7 @@ const handler = function (context) {
             url: userGithubDomain === repo.name ? 'https://' + userGithubDomain + '/login' : 'https://' + userGithubDomain + '/' + repo.name + '/login'
           })
           )
-          console.log('RESULTS!')
-          console.log(result)
 
-          console.log('start repo create if needed')
           // If reponame is provided, and the user doesn't already have neumannssg repos, create a new repo
           if (context.req.query.reponame && context.req.query.reponame.length > 0 && result.length === 0) {
             const AuthorizedOptionsWithForm = AuthorizedOptions
@@ -160,8 +157,6 @@ const handler = function (context) {
                       url: userGithubDomain === context.req.query.reponame ? 'https://' + userGithubDomain + '/login' : 'https://' + userGithubDomain + '/' + context.req.query.reponame + '/login'
                     }]
 
-                    console.log('context done!')
-                    console.log(result)
                     const error = `${origin} is not an allowed origin.`
                     context.res = {
                       status: 401,
@@ -190,8 +185,6 @@ const handler = function (context) {
             }]
           }
 
-          console.log('context done!')
-          console.log(result)
           const error = `${origin} is not an allowed origin.`
           context.res = {
             status: 401,
