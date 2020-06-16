@@ -12,7 +12,6 @@ const config = {
 if (process.env.NODE_ENV === 'development') {
   config.allowedOrigins.push('http://localhost:5500')
   config.allowedOrigins.push('http://localhost:3000')
-  config.allowedOrigins.push('https://gijswijs.github.io')
 }
 
 const handler = function (context) {
