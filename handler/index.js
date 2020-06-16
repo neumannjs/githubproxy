@@ -12,6 +12,7 @@ const config = {
 if (process.env.NODE_ENV === 'development') {
   config.allowedOrigins.push('http://localhost:5500')
   config.allowedOrigins.push('http://localhost:3000')
+  config.allowedOrigins.push('https://gijswijs.github.io')
 }
 
 const handler = function (context) {
@@ -55,6 +56,7 @@ const handler = function (context) {
 
     request('https://api.github.com/user', AuthorizedOptions, function (userInfoErr, userInfoResponse) {
       if (userInfoErr) {
+        context.log(userInfoErr)
         context.done({ status: 500, error: userInfoErr })
         return
       }
