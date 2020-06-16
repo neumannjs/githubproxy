@@ -58,6 +58,7 @@ const handler = function (context) {
         context.done({ status: 500, error: userInfoErr })
         return
       }
+      context.log(userInfoResponse)
 
       const userObject = JSON.parse(userInfoResponse.body)
       const username = userObject.login
