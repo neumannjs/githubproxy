@@ -85,7 +85,7 @@ const handler = function (context) {
           }
 
           const responseJson = JSON.parse(userInfoReposResponse.body)
-          const neumannRepos = responseJson.filter(repo => { return repo.topics && repo.topics.includes('neumannssg') })
+          const neumannRepos = responseJson.filter(repo => { return repo.topics && repo.topics.includes('janos') })
 
           personalGithubAvailable = !responseJson.some(repo => repo.name === userGithubDomain)
 
@@ -95,7 +95,7 @@ const handler = function (context) {
           })
           )
 
-          // If reponame is provided, and the user doesn't already have neumannssg repos, create a new repo
+          // If reponame is provided, and the user doesn't already have janos repos, create a new repo
           if (context.req.query.reponame && context.req.query.reponame.length > 0 && result.length === 0) {
             const AuthorizedOptionsWithForm = AuthorizedOptions
             AuthorizedOptionsWithForm.form = JSON.stringify({
@@ -112,10 +112,10 @@ const handler = function (context) {
               }
 
               if (forkResponse && forkResponse.statusCode === 201) {
-                // repo is created, now add topic (to be able to distinguish neumannssg repo's later on)
+                // repo is created, now add topic (to be able to distinguish janos repo's later on)
                 // PUT /repos/:owner/:repo/topics
                 const AuthorizedOptionsWithBody = AuthorizedOptions
-                AuthorizedOptionsWithBody.form = '{"names": ["neumannssg"]}'
+                AuthorizedOptionsWithBody.form = '{"names": ["janos"]}'
 
                 AuthorizedOptionsWithBody.headers.Accept = 'application/vnd.github.mercy-preview+json'
 
