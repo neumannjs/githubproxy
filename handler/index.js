@@ -9,12 +9,12 @@ const config = {
   allowedOrigins: []
 }
 
-if (process.env.NODE_ENV === 'development') {
-  config.allowedOrigins.push('http://localhost:5500')
-  config.allowedOrigins.push('http://localhost:3000')
-}
-
 const handler = function (context) {
+  config.allowedOrigins = []
+  if (process.env.NODE_ENV === 'development') {
+    config.allowedOrigins.push('http://localhost:5500')
+    config.allowedOrigins.push('http://localhost:3000')
+  }
   context.log('Proxy Accescode request')
   // Retrieve the request, more details about the event variable later
   const headers = context.req.headers
@@ -59,9 +59,9 @@ const handler = function (context) {
         context.done({ status: 500, error: userInfoErr })
         return
       }
-      context.log(userInfoResponse)
 
       const userObject = JSON.parse(userInfoResponse.body)
+      context.log(userObject)
       const username = userObject.login
       const allowedOrigins = config.allowedOrigins
       const userGithubDomain = username + '.github.io'
@@ -70,144 +70,157 @@ const handler = function (context) {
       // TODO: (Optional) Allow access to other repositories as well
       allowedOrigins.push('https://' + userGithubDomain)
 
-      let result = []
-      let personalGithubAvailable = false
+      request('https://api.github.com/user/orgs', AuthorizedOptions, function (userOrgsInfoErr, userOrgsInfoResponse) {
+        if (userOrgsInfoErr) {
+          context.log(userOrgsInfoErr)
+          context.done({ status: 500, error: userOrgsInfoErr })
+          return
+        }
+        const userOrgsObject = JSON.parse(userOrgsInfoResponse.body)
+        context.log(userOrgsObject)
+        userOrgsObject.forEach(org => {
+          allowedOrigins.push('https://' + org.login + '.github.io')
+        })
 
-      // Check for malicious request
-      if (!allowedOrigins.includes(origin)) {
+        let result = []
+        let personalGithubAvailable = false
 
-        // get the janos repos if there are any
-        // link to the create janos repo if not
-        request('https://api.github.com/user/repos', AuthorizedOptions, function (userReposErr, userInfoReposResponse) {
-          if (userReposErr) {
-            context.done({ status: 500, error: userReposErr })
-            return
-          }
+        // Check for malicious request
+        if (!allowedOrigins.includes(origin)) {
 
-          const responseJson = JSON.parse(userInfoReposResponse.body)
-          const janosRepos = responseJson.filter(repo => { return repo.topics && repo.topics.includes('janos') })
+          // get the janos repos if there are any
+          // link to the create janos repo if not
+          request('https://api.github.com/user/repos', AuthorizedOptions, function (userReposErr, userInfoReposResponse) {
+            if (userReposErr) {
+              context.done({ status: 500, error: userReposErr })
+              return
+            }
 
-          personalGithubAvailable = !responseJson.some(repo => repo.name === userGithubDomain)
+            const responseJson = JSON.parse(userInfoReposResponse.body)
+            const janosRepos = responseJson.filter(repo => { return repo.topics && repo.topics.includes('janos') })
 
-          result = janosRepos.map(repo => ({
-            name: repo.name,
-            url: userGithubDomain === repo.name ? 'https://' + userGithubDomain + '/login' : 'https://' + userGithubDomain + '/' + repo.name + '/login'
-          })
-          )
+            personalGithubAvailable = !responseJson.some(repo => repo.name === userGithubDomain)
 
-          // If reponame is provided, and the user doesn't already have janos repos, create a new repo
-          if (context.req.query.reponame && context.req.query.reponame.length > 0 && result.length === 0) {
-            const AuthorizedOptionsWithForm = AuthorizedOptions
-            AuthorizedOptionsWithForm.form = JSON.stringify({
-              name: context.req.query.reponame
+            result = janosRepos.map(repo => ({
+              name: repo.name,
+              url: userGithubDomain === repo.name ? 'https://' + userGithubDomain + '/login' : 'https://' + userGithubDomain + '/' + repo.name + '/login'
             })
+            )
 
-            AuthorizedOptions.headers.Accept = 'application/vnd.github.baptiste-preview+json'
+            // If reponame is provided, and the user doesn't already have janos repos, create a new repo
+            if (context.req.query.reponame && context.req.query.reponame.length > 0 && result.length === 0) {
+              const AuthorizedOptionsWithForm = AuthorizedOptions
+              AuthorizedOptionsWithForm.form = JSON.stringify({
+                name: context.req.query.reponame
+              })
 
-            request.post('https://api.github.com/repos/' + process.env.TEMPLATE_REPO + '/generate', AuthorizedOptionsWithForm, function (forkErr, forkResponse) {
-              if (forkErr) {
-                context.log(forkErr)
-                context.done({ status: 500, error: forkErr })
-                return
-              }
+              AuthorizedOptions.headers.Accept = 'application/vnd.github.baptiste-preview+json'
 
-              if (forkResponse && forkResponse.statusCode === 201) {
-                // repo is created, now add topic (to be able to distinguish janos repo's later on)
-                // PUT /repos/:owner/:repo/topics
-                const AuthorizedOptionsWithBody = AuthorizedOptions
-                AuthorizedOptionsWithBody.form = '{"names": ["janos"]}'
+              request.post('https://api.github.com/repos/' + process.env.TEMPLATE_REPO + '/generate', AuthorizedOptionsWithForm, function (forkErr, forkResponse) {
+                if (forkErr) {
+                  context.log(forkErr)
+                  context.done({ status: 500, error: forkErr })
+                  return
+                }
 
-                AuthorizedOptionsWithBody.headers.Accept = 'application/vnd.github.mercy-preview+json'
+                if (forkResponse && forkResponse.statusCode === 201) {
+                  // repo is created, now add topic (to be able to distinguish janos repo's later on)
+                  // PUT /repos/:owner/:repo/topics
+                  const AuthorizedOptionsWithBody = AuthorizedOptions
+                  AuthorizedOptionsWithBody.form = '{"names": ["janos"]}'
 
-                context.log('Create topic')
+                  AuthorizedOptionsWithBody.headers.Accept = 'application/vnd.github.mercy-preview+json'
 
-                request.put('https://api.github.com/repos/' + username + '/' + context.req.query.reponame + '/topics', AuthorizedOptionsWithBody, function (topicErr, topicResponse) {
-                  if (topicErr) {
-                    context.log('topic ERROR')
-                    context.log(topicErr)
-                    context.done({ status: 500, error: topicErr })
-                    return
-                  }
-                  context.log('topic response OK')
-                  context.log(topicResponse.body)
+                  context.log('Create topic')
 
-                  const AuthorizedOptionsPages = AuthorizedOptions
-                  AuthorizedOptionsPages.form = JSON.stringify({
-                    source: {
-                      branch: 'master',
-                      path: '/docs'
-                    }
-                  })
-                  AuthorizedOptionsPages.headers.Accept = 'application/vnd.github.switcheroo-preview+json'
-
-                  context.log('Enable pages')
-
-                  request.post('https://api.github.com/repos/' + username + '/' + context.req.query.reponame + '/pages', AuthorizedOptionsPages, function (pagesErr, pagesResponse) {
-                    if (pagesErr) {
-                      context.log('pages ERROR')
-                      context.log(pagesErr)
-                      context.done({ status: 500, error: pagesErr })
+                  request.put('https://api.github.com/repos/' + username + '/' + context.req.query.reponame + '/topics', AuthorizedOptionsWithBody, function (topicErr, topicResponse) {
+                    if (topicErr) {
+                      context.log('topic ERROR')
+                      context.log(topicErr)
+                      context.done({ status: 500, error: topicErr })
                       return
                     }
-                    context.log('pages response OK')
-                    context.log(pagesResponse.statusCode)
-                    context.log(pagesResponse.body)
+                    context.log('topic response OK')
+                    context.log(topicResponse.body)
 
-                    // Sent back the an authentication error but with the newly created repository as info
-                    result = [{
-                      name: context.req.query.reponame,
-                      url: userGithubDomain === context.req.query.reponame ? 'https://' + userGithubDomain + '/login' : 'https://' + userGithubDomain + '/' + context.req.query.reponame + '/login'
-                    }]
-
-                    const error = `${origin} is not an allowed origin.`
-                    context.res = {
-                      status: 401,
-                      body: {
-                        error: error,
-                        info: JSON.stringify(result)
+                    const AuthorizedOptionsPages = AuthorizedOptions
+                    AuthorizedOptionsPages.form = JSON.stringify({
+                      source: {
+                        branch: 'master',
+                        path: '/docs'
                       }
-                    }
-                    context.done()
+                    })
+                    AuthorizedOptionsPages.headers.Accept = 'application/vnd.github.switcheroo-preview+json'
+
+                    context.log('Enable pages')
+
+                    request.post('https://api.github.com/repos/' + username + '/' + context.req.query.reponame + '/pages', AuthorizedOptionsPages, function (pagesErr, pagesResponse) {
+                      if (pagesErr) {
+                        context.log('pages ERROR')
+                        context.log(pagesErr)
+                        context.done({ status: 500, error: pagesErr })
+                        return
+                      }
+                      context.log('pages response OK')
+                      context.log(pagesResponse.statusCode)
+                      context.log(pagesResponse.body)
+
+                      // Sent back the an authentication error but with the newly created repository as info
+                      result = [{
+                        name: context.req.query.reponame,
+                        url: userGithubDomain === context.req.query.reponame ? 'https://' + userGithubDomain + '/login' : 'https://' + userGithubDomain + '/' + context.req.query.reponame + '/login'
+                      }]
+
+                      const error = `${origin} is not an allowed origin.`
+                      context.res = {
+                        status: 401,
+                        body: {
+                          error: error,
+                          info: JSON.stringify(result)
+                        }
+                      }
+                      context.done()
+                    })
                   })
-                })
-              } else {
-                context.res = {
-                  status: 500,
-                  body: {
-                    error: JSON.parse(forkResponse.body)
+                } else {
+                  context.res = {
+                    status: 500,
+                    body: {
+                      error: JSON.parse(forkResponse.body)
+                    }
                   }
                 }
-              }
-            })
-          }
-
-          if (result.length === 0 && personalGithubAvailable) {
-            result = [{
-              create: userGithubDomain
-            }]
-          }
-
-          const error = `${origin} is not an allowed origin.`
-          context.res = {
-            status: 401,
-            body: {
-              error: error,
-              info: JSON.stringify(result)
+              })
             }
+
+            if (result.length === 0 && personalGithubAvailable) {
+              result = [{
+                create: userGithubDomain
+              }]
+            }
+
+            const error = `${origin} is not an allowed origin.`
+            context.res = {
+              status: 401,
+              body: {
+                error: error,
+                info: JSON.stringify(result)
+              }
+            }
+            context.done()
+          })
+        } else {
+          context.res = {
+            status: 200,
+            body: JSON.parse(response.body),
+            headers: { 'Content-Type': 'application/xml' },
+            isRaw: true
           }
+
           context.done()
-        })
-      } else {
-        context.res = {
-          status: 200,
-          body: JSON.parse(response.body),
-          headers: { 'Content-Type': 'application/xml' },
-          isRaw: true
         }
 
-        context.done()
-      }
-
+      })
     })
   })
 }
