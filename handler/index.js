@@ -76,8 +76,8 @@ const handler = function (context) {
       // Check for malicious request
       if (!allowedOrigins.includes(origin)) {
 
-        // get the neumann repos if there are any
-        // link to the create neumann repo if not
+        // get the janos repos if there are any
+        // link to the create janos repo if not
         request('https://api.github.com/user/repos', AuthorizedOptions, function (userReposErr, userInfoReposResponse) {
           if (userReposErr) {
             context.done({ status: 500, error: userReposErr })
@@ -85,11 +85,11 @@ const handler = function (context) {
           }
 
           const responseJson = JSON.parse(userInfoReposResponse.body)
-          const neumannRepos = responseJson.filter(repo => { return repo.topics && repo.topics.includes('janos') })
+          const janosRepos = responseJson.filter(repo => { return repo.topics && repo.topics.includes('janos') })
 
           personalGithubAvailable = !responseJson.some(repo => repo.name === userGithubDomain)
 
-          result = neumannRepos.map(repo => ({
+          result = janosRepos.map(repo => ({
             name: repo.name,
             url: userGithubDomain === repo.name ? 'https://' + userGithubDomain + '/login' : 'https://' + userGithubDomain + '/' + repo.name + '/login'
           })
