@@ -84,20 +84,24 @@ const handler = function (context) {
 
         let result = []
         let personalGithubAvailable = false
+        // get the janos repos if there are any
+        request('https://api.github.com/user/repos', AuthorizedOptions, function (userReposErr, userInfoReposResponse) {
+          if (userReposErr) {
+            context.done({ status: 500, error: userReposErr })
+            return
+          }
 
-        // Check for malicious request
-        if (!allowedOrigins.includes(origin)) {
-
-          // get the janos repos if there are any
-          // link to the create janos repo if not
-          request('https://api.github.com/user/repos', AuthorizedOptions, function (userReposErr, userInfoReposResponse) {
-            if (userReposErr) {
-              context.done({ status: 500, error: userReposErr })
-              return
-            }
-
-            const responseJson = JSON.parse(userInfoReposResponse.body)
-            const janosRepos = responseJson.filter(repo => { return repo.topics && repo.topics.includes('janos') })
+          const responseJson = JSON.parse(userInfoReposResponse.body)
+          const janosRepos = responseJson.filter(repo => { return repo.topics && repo.topics.includes('janos') })
+          
+          //Add homepage property to allowedOrigins
+          //This is used to allow for custom domains. If a custom domain is
+          //configured this domain should be set as the homepage of the repo.
+          janosRepos.forEach(repo => {
+            allowedOrigins.push(repo.homepage)
+          })
+          // Check for malicious request
+          if (!allowedOrigins.includes(origin)) {
 
             personalGithubAvailable = !responseJson.some(repo => repo.name === userGithubDomain)
 
@@ -208,18 +212,18 @@ const handler = function (context) {
               }
             }
             context.done()
-          })
-        } else {
-          context.res = {
-            status: 200,
-            body: JSON.parse(response.body),
-            headers: { 'Content-Type': 'application/xml' },
-            isRaw: true
+            
+          } else {
+            context.res = {
+              status: 200,
+              body: JSON.parse(response.body),
+              headers: { 'Content-Type': 'application/xml' },
+              isRaw: true
+            }
+
+            context.done()
           }
-
-          context.done()
-        }
-
+        })
       })
     })
   })
