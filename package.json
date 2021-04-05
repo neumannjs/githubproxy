@@ -1,6 +1,6 @@
 {
   "name": "githubproxy",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Proxy for secure GitHub Oauth authentication for Janos Static Site Generator",
   "main": "./handler/index.js",
   "dependencies": {
