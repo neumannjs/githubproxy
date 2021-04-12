@@ -6,7 +6,7 @@
       "direction": "in",
       "name": "req",
       "methods": ["get", "post"],
-      "route": "authorize/{user?}/{repo?}"
+      "route": "micropub/{user}/{repo}"
     },
     {
       "type": "http",

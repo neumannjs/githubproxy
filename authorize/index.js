@@ -9,6 +9,9 @@ module.exports = function (context, req) {
     redirectUri: process.env.REDIRECT_URI,
   };
 
+  const repo = context.bindingData.repo;
+  const user = context.bindingData.user;
+
   if (req.query.state && req.method === "GET") {
     let redirectUrl =
       "https://github.com/login/oauth/authorize" +
@@ -28,7 +31,14 @@ module.exports = function (context, req) {
       "response_type",
       req.query.response_type
     );
-    redirectUrl = addOptionalArgument(redirectUrl, "scope", req.query.scope);
+    let scope = req.query.scope;
+    if (scope && scope.indexOf("repo") < 0) {
+      scope += " repo";
+    }
+    if (scope && scope.indexOf("read:user") < 0) {
+      scope += " read:user";
+    }
+    redirectUrl = addOptionalArgument(redirectUrl, "scope", scope);
     https: context.res = {
       status: 302,
       headers: {
@@ -80,18 +90,19 @@ module.exports = function (context, req) {
         },
       };
 
+      // request github pages site
       request(
-        "https://api.github.com/user",
+        `https://api.github.com/repos/${user}/${repo}/pages`,
         AuthorizedOptions,
-        function (userInfoErr, userInfoResponse) {
-          if (userInfoErr) {
-            context.log(userInfoErr);
-            context.done({ status: 500, error: userInfoErr });
+        function (repoErr, repoResponse) {
+          if (repoErr) {
+            context.log(repoErr);
+            context.done({ status: 500, error: repoErr });
             return;
           }
 
-          const userObject = JSON.parse(userInfoResponse.body);
-          const response = { me: userObject.blog };
+          const repoObject = JSON.parse(repoResponse.body);
+          const response = { me: repoObject.html_url };
           context.res = {
             status: 200,
             body: JSON.stringify(response),
