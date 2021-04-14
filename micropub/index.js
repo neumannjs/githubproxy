@@ -134,6 +134,16 @@ module.exports = (context, req) => {
         });
         micropubDocument.properties.collection = postType;
 
+        // copy slug property from mp to properties (where the formatter expects
+        // it)
+        if (
+          micropubDocument.properties.mp &&
+          micropubDocument.properties.mp.slug &&
+          micropubDocument.properties.mp.slug[0]
+        ) {
+          micropubDocument.properties.slug =
+            micropubDocument.properties.mp.slug;
+        }
         // TODO: These properties should come out of metalsmith.json:
         // filenameStyle, filesStyle, permalinkStyle, layoutName
         const formatter = new MicropubFormatter({
@@ -142,6 +152,7 @@ module.exports = (context, req) => {
           filesStyle: "_src/stream/media/:year/:month/:day-:slug/:filesslug",
           permalinkStyle: `${postType}/:year/:month/:day-:slug`,
           layoutName: "miksa/micropubpost.njk",
+          deriveCategory: false,
         });
 
         return formatter.formatAll(micropubDocument).then(async (formatted) => {
@@ -149,20 +160,33 @@ module.exports = (context, req) => {
           // collection property is renamed by formatter to mf-collection (to
           // avoid possible collission with with pre-existing Jekyll properties)
           // but Metalsmith needs it as `collection`, so we need to rename it
-          // back to the original.
+          // back to the original. We also rename other properties that have
+          // hyphens because hyphens don't play nice with nunjucks.
           let file = matter(formatted.content);
           file.data.collection = postType;
           delete file.data["mf-collection"];
+          if (file.data["mf-location"]) {
+            file.data.location = file.data["mf-location"];
+            delete file.data["mf-location"];
+          }
 
-          if (
-            formatted.raw.properties.mp &&
-            formatted.raw.properties.mp["syndicate-to"]
-          ) {
-            const syndicate = formatted.raw.properties.mp[
-              "syndicate-to"
-            ].forEach((url) => {
-              file.content += "[](" + url + ")";
-            });
+          if (file.data["mf-in-reply-to"]) {
+            file.data.inreplyto = file.data["mf-in-reply-to"];
+            delete file.data["mf-in-reply-to"];
+          }
+
+          // Put brid.gy syndication links in the content
+          if (formatted.raw.mp && formatted.raw.mp["syndicate-to"]) {
+            const syndicate = formatted.raw.mp["syndicate-to"].forEach(
+              (url) => {
+                file.content += "[](" + url + ")";
+              }
+            );
+          }
+
+          //metalsmith wants its tags comma-separated
+          if (file.data.tags) {
+            file.data.tags = file.data.tags.replace(/\s/g, ", ");
           }
 
           //create a simple html file using the javascript object based on the
@@ -210,16 +234,13 @@ module.exports = (context, req) => {
           // Wait for 10 seconds, just to be sure the file is online
           await delay(10000);
 
-          if (
-            formatted.raw.properties.mp &&
-            formatted.raw.properties.mp["syndicate-to"]
-          ) {
-            const syndicate = formatted.raw.properties.mp["syndicate-to"].map(
-              (url) => {
-                webmentionAsync(formatted.url + "/index.html", url);
-              }
+          if (formatted.raw.mp && formatted.raw.mp["syndicate-to"]) {
+            const syndicate = formatted.raw.mp["syndicate-to"].map((url) => {
+              return webmentionAsync(formatted.url + "/index.html", url);
+            });
+            file.data.syndication = (await Promise.all(syndicate)).map(
+              (ret) => ret.url
             );
-            file.data.syndication = await Promise.all(syndicate);
           }
 
           //metalsmith doesn't like quotes around dates, so we remove them
