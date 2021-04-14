@@ -170,6 +170,21 @@ module.exports = (context, req) => {
             delete file.data["mf-location"];
           }
 
+          if (file.data["mf-like-of"]) {
+            file.data.likeof = file.data["mf-like-of"];
+            delete file.data["mf-like-of"];
+          }
+
+          if (file.data["mf-repost-of"]) {
+            file.data.repostof = file.data["mf-repost-of"];
+            delete file.data["mf-repost-of"];
+          }
+
+          if (file.data["mf-bookmark-of"]) {
+            file.data.bookmarkof = file.data["mf-bookmark-of"];
+            delete file.data["mf-bookmark-of"];
+          }
+
           if (file.data["mf-in-reply-to"]) {
             file.data.inreplyto = file.data["mf-in-reply-to"];
             delete file.data["mf-in-reply-to"];
