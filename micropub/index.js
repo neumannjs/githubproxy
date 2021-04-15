@@ -119,6 +119,14 @@ module.exports = (context, req) => {
                   uid: "https://brid.gy/publish/mastodon",
                   name: "bitcoinhackers.org/@gijswijs",
                 },
+                {
+                  uid: "https://brid.gy/publish/github",
+                  name: "github.com/gijswijs",
+                },
+                {
+                  uid: "https://brid.gy/publish/meetup",
+                  name: "meetup.com",
+                },
               ],
             };
             return syndicationResponse;
