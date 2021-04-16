@@ -18,7 +18,10 @@ module.exports = async function (context, req) {
       context.log("state: " + state + "; redirectUrl: " + redirectUrl);
     }
     redirectUrl +=
-      "?code=" + encodeURI(req.query.code) + "&state=" + encodeURI(state);
+      "?code=" +
+      encodeURI(req.query.code) +
+      "&state=" +
+      encodeURI(state).replace(/%20/g, "%2B");
     context.res = {
       status: 302,
       headers: {

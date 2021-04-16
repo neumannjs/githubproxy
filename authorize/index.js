@@ -20,7 +20,8 @@ module.exports = function (context, req) {
       "&redirect_uri=" +
       encodeURI(config.redirectUri) +
       "&state=" +
-      encodeURI(req.query.redirect_uri + "|" + req.query.state);
+      encodeURI(req.query.redirect_uri + "|") +
+      req.query.state;
     redirectUrl = addOptionalArgument(
       redirectUrl,
       "protocol",
