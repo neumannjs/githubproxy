@@ -1,4 +1,4 @@
-// TODO: Replace request module, becasue it is deprecated https://github.com/request/request/issues/3142
+// TODO: Replace request module, because it is deprecated https://github.com/request/request/issues/3142
 const request = require("request");
 require("dotenv").config();
 
@@ -11,6 +11,10 @@ const config = {
 
 const handler = function (context) {
   config.allowedOrigins = [];
+  // For development we allow localhost as an allowedOrigin. *BUT* if you want
+  // to test the create repo functionality for new users, you should comment
+  // this out. The flow for a new users starts when he request an admin for a
+  // site that is *not* in his allowedOrigins.
   if (process.env.NODE_ENV === "development") {
     config.allowedOrigins.push("http://localhost:5500");
     config.allowedOrigins.push("http://localhost:3000");
@@ -128,12 +132,12 @@ const handler = function (context) {
                     name: repo.name,
                     url:
                       userGithubDomain === repo.name
-                        ? "https://" + userGithubDomain + "/login"
+                        ? "https://" + userGithubDomain + "/admin"
                         : "https://" +
                           userGithubDomain +
                           "/" +
                           repo.name +
-                          "/login",
+                          "/admin",
                   }));
 
                   // If reponame is provided, and the user doesn't already have janos repos, create a new repo
@@ -145,6 +149,7 @@ const handler = function (context) {
                     const AuthorizedOptionsWithForm = AuthorizedOptions;
                     AuthorizedOptionsWithForm.form = JSON.stringify({
                       name: context.req.query.reponame,
+                      include_all_branches: true,
                     });
 
                     AuthorizedOptions.headers.Accept =
@@ -233,12 +238,12 @@ const handler = function (context) {
                                         context.req.query.reponame
                                           ? "https://" +
                                             userGithubDomain +
-                                            "/login"
+                                            "/admin"
                                           : "https://" +
                                             userGithubDomain +
                                             "/" +
                                             context.req.query.reponame +
-                                            "/login",
+                                            "/admin",
                                     },
                                   ];
 
