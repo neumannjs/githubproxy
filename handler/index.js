@@ -15,10 +15,10 @@ const handler = function (context) {
   // to test the create repo functionality for new users, you should comment
   // this out. The flow for a new users starts when he request an admin for a
   // site that is *not* in his allowedOrigins.
-  if (process.env.NODE_ENV === "development") {
-    config.allowedOrigins.push("http://localhost:5500");
-    config.allowedOrigins.push("http://localhost:3000");
-  }
+  // if (process.env.NODE_ENV === "development") {
+  //   config.allowedOrigins.push("http://localhost:5500");
+  //   config.allowedOrigins.push("http://localhost:3000");
+  // }
   context.log("Proxy Accescode request");
   // Retrieve the request, more details about the event variable later
   const headers = context.req.headers;
@@ -270,25 +270,25 @@ const handler = function (context) {
                         }
                       }
                     );
-                  }
+                  } else {
+                    if (result.length === 0 && personalGithubAvailable) {
+                      result = [
+                        {
+                          create: userGithubDomain,
+                        },
+                      ];
+                    }
 
-                  if (result.length === 0 && personalGithubAvailable) {
-                    result = [
-                      {
-                        create: userGithubDomain,
+                    const error = `${origin} is not an allowed origin.`;
+                    context.res = {
+                      status: 401,
+                      body: {
+                        error: error,
+                        info: JSON.stringify(result),
                       },
-                    ];
+                    };
+                    context.done();
                   }
-
-                  const error = `${origin} is not an allowed origin.`;
-                  context.res = {
-                    status: 401,
-                    body: {
-                      error: error,
-                      info: JSON.stringify(result),
-                    },
-                  };
-                  context.done();
                 } else {
                   context.res = {
                     status: 200,
