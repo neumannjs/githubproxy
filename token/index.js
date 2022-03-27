@@ -3,6 +3,7 @@ const crypto = require("crypto");
 var qs = require("qs");
 const { Octokit } = require("@octokit/core");
 const { createOAuthUserAuth } = require("@octokit/auth-oauth-user");
+const validateAccessToken = require("../shared-code/validate-access-token");
 
 module.exports = async function (context, req) {
   context.log("Proxy Github token request " + req.method);
@@ -25,22 +26,11 @@ module.exports = async function (context, req) {
     );
   }
 
-  const headers = context.req.headers;
   const repo = context.bindingData.repo;
   const user = context.bindingData.user;
 
   if (req.method === "GET") {
-    const token = headers.authorization.replace("Bearer ", "");
-
-    let decoded;
-
-    try {
-      decoded = jwt.verify(token, config.clientSecret);
-    } catch (err) {
-      context.log("Decrypting jwt failed");
-      context.done({ status: 500, error: "Decrypting jwt failed" });
-      return;
-    }
+    let decoded = validateAccessToken(req, context);
 
     let response = {
       me: decoded.me,
@@ -92,8 +82,7 @@ module.exports = async function (context, req) {
         access_token: access_token,
         nonce: crypto.randomBytes(16).toString("base64"),
       },
-      config.clientSecret,
-      { expiresIn: "1h" }
+      config.clientSecret
     );
 
     let response = {
