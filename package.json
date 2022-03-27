@@ -14,7 +14,7 @@
     "github-publish": "^3.0.0",
     "gray-matter": "^4.0.2",
     "jsonwebtoken": "^8.5.1",
-    "marked": "^2.0.3",
+    "marked": "^4.0.10",
     "micropub-express": "^0.9.1",
     "nunjucks": "^3.2.3",
     "nunjucks-date-filter": "^0.1.1",
