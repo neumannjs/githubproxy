@@ -128,6 +128,62 @@ module.exports = (context, req) => {
             'media-endpoint'
           ] = `https://janos-githubproxy.azurewebsites.net/api/micropubmedia/${user}/${repo}`
         }
+        if (query === 'post-types' || query === 'config') {
+          queryResponse['post-types'] = [
+            {
+              type: 'note',
+              name: 'Note',
+              properties: ['content', 'category', 'post-status', 'visibility'],
+              'required-properties': ['content'],
+            },
+            {
+              type: 'bookmark',
+              name: 'Bookmark',
+            },
+            {
+              type: 'rsvp',
+              name: 'RSVP',
+            },
+            {
+              type: 'photo',
+              name: 'Photo',
+            },
+            {
+              type: 'like',
+              name: 'Like',
+            },
+            {
+              type: 'listen',
+              name: 'Listen',
+            },
+            {
+              type: 'reply',
+              name: 'Reply',
+              properties: [
+                'in-reply-to',
+                'photo',
+                'content',
+                'category',
+                'post-status',
+                'visibility',
+              ],
+              'required-properties': ['in-reply-to', 'content'],
+            },
+            {
+              type: 'repost',
+              name: 'Repost',
+              properties: [
+                'repost-of',
+                'photo',
+                'content',
+                'category',
+                'post-status',
+                'visibility',
+              ],
+              'required-properties': ['repost-of'],
+            },
+          ]
+        }
         if (queryResponse !== {}) {
           return Promise.resolve().then(function () {
             return queryResponse
@@ -291,6 +347,8 @@ module.exports = (context, req) => {
             }
 
             const syndicate = file.data.syndicateTo.map(async (url) => {
+              context.log('syndicate: ' + formatted.url + '/index.html')
+              context.log('target: ' + url)
               const webmention = await webmentionAsync(
                 formatted.url + '/index.html',
                 url
@@ -307,6 +365,7 @@ module.exports = (context, req) => {
                 file.data.syndication = values
               })
               .catch((error) => {
+                context.log('error from Bridgy')
                 context.log(error.message)
               })
           }
