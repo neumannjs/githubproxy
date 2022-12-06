@@ -21,7 +21,7 @@
     "octokit": "^1.7.1",
     "parse-multipart": "^1.0.4",
     "post-type-discovery": "^1.0.4",
-    "qs": "^6.10.1",
+    "qs": "^6.10.3",
     "request": "^2.88.0",
     "send-webmention": "^2.0.0"
   },
